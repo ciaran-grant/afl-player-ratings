@@ -1,0 +1,2 @@
+chain_file_path = "/Users/ciaran/Documents/Projects/AFL/git-repositories/afl-player-ratings/data/match_chains_202319.csv"
+shots_file_path = "/Users/ciaran/Documents/Projects/AFL/git-repositories/afl-player-ratings/data/shot_chains_expected_score_v4_202319.csv"
