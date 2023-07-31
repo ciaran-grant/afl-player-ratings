@@ -9,6 +9,8 @@ import pandas as pd
 from pandera.typing import DataFrame, Series
 from sklearn.exceptions import NotFittedError
 
+from mplfooty.pitch import Pitch
+
 from scipy.interpolate import interp2d
 
 from mplfooty.pitch import Pitch
@@ -20,56 +22,58 @@ x_bins = 40
 y_bins = 32
 bins = (x_bins, y_bins)
 
-def _get_cell_indexes(
-    x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins
-) -> Tuple[Series[int], Series[int]]:
-    xi = x.divide(pitch_length).multiply(l)
-    yi = y.divide(pitch_width).multiply(w)
-    
-    xi = xi.astype("int64").clip(-l/2, l/2)
-    yi = yi.astype("int64").clip(-w/2, w/2)
-    
-    xi, yi = (xi+(l/2-1)).astype(int).clip(0, l-1), (yi+(w/2-1)).astype(int).clip(0, w-1)
-    
-    return xi, yi
+pitch = Pitch(pitch_width=pitch_width, pitch_length=pitch_length)
 
-def _get_flat_indexes(x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins) -> Series[int]:
-    xi, yi = _get_cell_indexes(x, y, l, w)
-    return l * (w - 1 - yi) + xi
+# def _get_cell_indexes(
+#     x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins
+# ) -> Tuple[Series[int], Series[int]]:
+#     xi = x.divide(pitch_length).multiply(l)
+#     yi = y.divide(pitch_width).multiply(w)
+    
+#     xi = xi.astype("int64").clip(-l/2, l/2)
+#     yi = yi.astype("int64").clip(-w/2, w/2)
+    
+#     xi, yi = (xi+(l/2-1)).astype(int).clip(0, l-1), (yi+(w/2-1)).astype(int).clip(0, w-1)
+    
+#     return xi, yi
 
-def _count(x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins) -> npt.NDArray[np.int_]:
-    """ Count the number of actions occurring in each cell of the grid.
+# def _get_flat_indexes(x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins) -> Series[int]:
+#     xi, yi = _get_cell_indexes(x, y, l, w)
+#     return l * (w - 1 - yi) + xi
+
+# def _count(x: Series[float], y: Series[float], l: int = x_bins, w: int = y_bins) -> npt.NDArray[np.int_]:
+#     """ Count the number of actions occurring in each cell of the grid.
     
-    Parameters
-    ----------
-    x : pd.Series
-        The x-coordinates of the actions.
-    y : pd.Series
-        The y-coordinates of the actions.
-    l : int
-        Amount of grid cells in the x-dimension of the grid.
-    w : int
-        Amount of grid cells in the y-dimension of the grid.
+#     Parameters
+#     ----------
+#     x : pd.Series
+#         The x-coordinates of the actions.
+#     y : pd.Series
+#         The y-coordinates of the actions.
+#     l : int
+#         Amount of grid cells in the x-dimension of the grid.
+#     w : int
+#         Amount of grid cells in the y-dimension of the grid.
     
-    Returns
-    -------
-    np.ndarray
-        A matrix, denoting the amount of actions occurring in each cell.
-        The centre is the origin.
+#     Returns
+#     -------
+#     np.ndarray
+#         A matrix, denoting the amount of actions occurring in each cell.
+#         The centre is the origin.
         
-    """
+#     """
     
-    x = x[~np.isnan(x) & ~np.isnan(y)]
-    y = y[~np.isnan(x) & ~np.isnan(y)]
+#     x = x[~np.isnan(x) & ~np.isnan(y)]
+#     y = y[~np.isnan(x) & ~np.isnan(y)]
     
-    flat_indexes = _get_flat_indexes(x, y, l, w)
-    vc = flat_indexes.value_counts(sort=False)
-    vector = np.zeros(w * l, dtype=int)
-    vector[vc.index] = vc
-    return vector.reshape((w, l))
+#     flat_indexes = _get_flat_indexes(x, y, l, w)
+#     vc = flat_indexes.value_counts(sort=False)
+#     vector = np.zeros(w * l, dtype=int)
+#     vector[vc.index] = vc
+#     return vector.reshape((w, l))
 
-def _safe_divide(a: npt.ArrayLike, b: npt.ArrayLike) -> npt.NDArray[np.float64]:
-    return np.divide(a, b, out=np.zeros_like(a, dtype="float64"), where=b != 0, casting = "unsafe")
+# def _safe_divide(a: npt.ArrayLike, b: npt.ArrayLike) -> npt.NDArray[np.float64]:
+#     return np.divide(a, b, out=np.zeros_like(a, dtype="float64"), where=b != 0, casting = "unsafe")
 
 def scoring_prob(actions: DataFrame, l: int=x_bins, w: int=y_bins) -> npt.NDArray[np.float64]:
     """ Compute the probability of scoring when taking a shot for each cell.
@@ -88,12 +92,11 @@ def scoring_prob(actions: DataFrame, l: int=x_bins, w: int=y_bins) -> npt.NDArra
     npt.NDArray
         A matrix, denoting the probability of scoring for each cell.
     """
-    shot_actions = actions[(actions['type_name'] == "Shot")]
-    goals = shot_actions[(actions['goal'] == True)]
-    
-    shot_matrix = _count(shot_actions['x'], shot_actions['y'], l, w)
-    goal_matrix = _count(goals['x'], goals['y'], l, w)
-    return _safe_divide(goal_matrix, shot_matrix)
+    goal_probability = pitch.bin_statistic(actions.loc[actions['shoot'], 'x'],
+                                           actions.loc[actions['shoot'], 'y'], 
+                                           values=actions.loc[actions['shoot'], 'goal'],
+                                           statistic='mean', bins=bins)
+    return goal_probability
 
 def get_move_actions(actions: DataFrame) -> DataFrame:
     """Get all ball-progressing actions.
@@ -147,14 +150,14 @@ def action_prob(actions: DataFrame, l: int=x_bins, w: int=y_bins) -> Tuple[npt.N
         For each cell, the probability of choosing to move.
     """
     
-    move_actions = get_move_actions(actions)
-    shot_actions = actions[(actions['type_name'] == "Shot")]
     
-    move_matrix = _count(move_actions['x'], move_actions['y'], l, w)
-    shot_matrix = _count(shot_actions['x'], shot_actions['y'], l, w)
-    total_matrix = move_matrix + shot_matrix
+    shot_probability = pitch.bin_statistic(actions['x'], actions['y'], values=actions['shoot'],
+                                           statistic='mean', bins=bins)
+    move_probability = pitch.bin_statistic(actions['x'], actions['y'], values=actions['move'],
+                                           statistic='mean', bins=bins)
+
     
-    return _safe_divide(shot_matrix, total_matrix), _safe_divide(move_matrix, total_matrix)
+    return shot_probability, move_probability
 
 def move_transition_matrix(actions: DataFrame, l: int=x_bins, w: int=y_bins
                            ) -> npt.NDArray[np.float64]:
@@ -179,23 +182,35 @@ def move_transition_matrix(actions: DataFrame, l: int=x_bins, w: int=y_bins
     """
     
     move_actions = get_move_actions(actions)
-    
-    X = pd.DataFrame()
-    X['start_cell'] = _get_flat_indexes(move_actions['x'], move_actions['y'], l, w)
-    X['end_cell'] = _get_flat_indexes(move_actions['end_x'], move_actions['end_y'], l, w)
-    X['outcome'] = move_actions['outcome_name']
-    
-    vc = X['start_cell'].value_counts(sort=False)
-    start_counts = np.zeros(w * l)
-    start_counts[vc.index] = vc
-    
-    transition_matrix = np.zeros((w * l, w * l))
-    
-    for i in range(0, w * l):
-        vc2 = X[(X['start_cell'] == i) & (X['outcome'] == True)]['end_cell'].value_counts(sort=False)
-        transition_matrix[i, vc2.index] = vc2 / start_counts[i]
-        
-    return transition_matrix
+    bin_start_locations = pitch.bin_statistic(move_actions['x'], move_actions['y'], bins=bins)
+    move_actions = move_actions[bin_start_locations['inside']].copy()
+
+    bin_end_locations = pitch.bin_statistic(move_actions['end_x'], move_actions['end_y'], bins=bins)
+    move_success = move_actions[(bin_end_locations['inside']) & (move_actions['outcome_name'] == True)].copy()
+
+    # get a dataframe of successful moves and the grid cells they start/end in
+    bin_success_start = pitch.bin_statistic(move_success['x'], move_success['y'], bins=bins)
+    bin_success_end = pitch.bin_statistic(move_success['end_x'], move_success['end_y'], bins = bins)
+    df_bin = pd.DataFrame({
+        'x': bin_success_start['binnumber'][0],
+        'y': bin_success_start['binnumber'][1],
+        'end_x': bin_success_end['binnumber'][0],
+        'end_y': bin_success_end['binnumber'][1]
+    })
+
+    # calculate the bin counts for successful moves (number of moves between grid cells)
+    bin_counts = df_bin.value_counts().reset_index(name='bin_counts')
+    # create the move_transition_matrix of shape (num_y_bins, num_x_bins, num_y_bins, num_x_bins)
+    # this is the number of successful moves between grid cells
+    move_transition_matrix = np.zeros((w, l, w, l))
+    move_transition_matrix[bin_counts['y'], bin_counts['x'], bin_counts['end_y'], bin_counts['end_x']] = bin_counts['bin_counts'].values
+
+    # and divide by the starting locations for all moves to get probability of moving ball successfully
+    bin_start_locations = pitch.bin_statistic(move_actions['x'], move_actions['y'], bins=bins)
+    bin_start_locations = np.expand_dims(bin_start_locations['statistic'], (2, 3))
+    move_transition_matrix = np.divide(move_transition_matrix, bin_start_locations, out=np.zeros_like(move_transition_matrix), where=bin_start_locations != 0)
+
+    return move_transition_matrix
 
 class ExpectedThreat:
     """An implementation of the Expected Threat (xT) model.
@@ -239,7 +254,7 @@ class ExpectedThreat:
         p_scoring: npt.NDArray[np.float64],
         p_shot: npt.NDArray[np.float64],
         p_move: npt.NDArray[np.float64],
-        transition_matrix: npt.NDArray[np.float64]
+        move_transition_matrix: npt.NDArray[np.float64]
     ) -> None:
         """Solves the expected threat equation with dynamic programming.
 
@@ -254,30 +269,19 @@ class ExpectedThreat:
         transition_matrix : (np.ndarray, shape((y_bins, x_bins), (y_bins, x_bins)):
             When moving, the probability of moving to each of the other zones.
         """
-        goal_scoring_prob = p_scoring * p_shot
-        diff = np.ones((self.w, self.l), dtype=np.float64)
-        iterations = 0
-        self.heatmaps.append(self.xT.copy())
-        
-        while np.any(diff > self.eps):
-            total_payoff = np.zeros((self.w, self.l), dtype=np.float64)
-            
-            for y in range(0, self.w):
-                for x in range(0, self.l):
-                    for q in range(0, self.w):
-                        for z in range(0, self.l):
-                            total_payoff[y, x] += (
-                                transition_matrix[self.l * y + x, self.l * q + z] * self.xT[q, z]
-                            )
-                            
-            new_xT = goal_scoring_prob + (p_move * total_payoff)
-            diff = new_xT - self.xT
-            self.xT = new_xT
-            self.heatmaps.append(self.xT.copy())
-            
-            iterations += 1
-            
-        print("# iterations: ", iterations)
+        xT = np.multiply(p_shot, p_scoring)
+        diff=1
+        iteration=0
+        while np.any(diff > 0.00001): # iterate until the differences are small
+            xT_copy = xT.copy()
+            # Calculate the new expected threat
+            xT = (np.multiply(p_shot, p_scoring) + 
+                np.multiply(p_move, 
+                            np.multiply(move_transition_matrix, np.expand_dims(xT, axis=(0, 1))).sum(axis=(2,3))))
+            diff = (xT - xT_copy)
+            self.xT = xT
+            iteration += 1
+        print('Number of iterations: ', iteration)
         
     def fit(self, actions: DataFrame) -> "ExpectedThreat":
         """ Fits the xT model with the given actions.
@@ -292,10 +296,14 @@ class ExpectedThreat:
         self
             Fitted xT model
         """
-        self.scoring_prob_matrix = scoring_prob(actions, self.l, self.w)
-        self.shot_prob_matrix, self.move_prob_matrix = action_prob(actions, self.l, self.w)
-        self.transition_matrix = move_transition_matrix(actions, self.l, self.w)
+        goal_probability = scoring_prob(actions, self.l, self.w)
+        shot_probability, move_probability = action_prob(actions, self.l, self.w)
+        
+        self.scoring_prob_matrix = np.nan_to_num(goal_probability['statistic'])
+        self.shot_prob_matrix, self.move_prob_matrix = np.nan_to_num(shot_probability['statistic']), np.nan_to_num(move_probability['statistic'])
+        self.transition_matrix = np.nan_to_num(move_transition_matrix(actions, self.l, self.w))
         self.xT = np.zeros((self.w, self.l))
+        
         self.__solve(
             self.scoring_prob_matrix,
             self.shot_prob_matrix,
@@ -380,13 +388,19 @@ class ExpectedThreat:
         
         move_actions = get_successful_move_actions(actions.reset_index())
         
-        startxc, startyc = _get_cell_indexes(move_actions['x'], move_actions['y'], l, w)
-        endxc, endyc = _get_cell_indexes(move_actions['end_x'], move_actions['end_y'], l, w)
+        # Get grid start ad end cells
+        grid_start = pitch.bin_statistic(move_actions['x'], move_actions['y'], bins=bins)
+        grid_end = pitch.bin_statistic(move_actions['end_x'], move_actions['end_y'], bins=bins)
+
+        # Then xT values from start and end grid cell
+        start_xT = self.xT[grid_start['binnumber'][1], grid_start['binnumber'][0]]
+        end_xT = self.xT[grid_end['binnumber'][1], grid_end['binnumber'][0]]
+
+        # calculate added xT
+        added_xT = end_xT - start_xT
+        move_actions['xT'] = added_xT
         
-        xT_start = grid[startyc.rsub(w - 1), startxc]
-        xT_end = grid[endyc.rsub(w-1), endxc]
-        
-        ratings[move_actions.index] = xT_end - xT_start
+        ratings[move_actions.index] = end_xT - start_xT
         return ratings
     
     def save_model(self, file_path:str, overwrite : bool = True) -> None:
