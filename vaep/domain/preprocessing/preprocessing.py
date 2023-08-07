@@ -296,7 +296,7 @@ def create_match_gamestate_features(actions, match_id, num_prev_actions=3):
             end_location(states[actions]),
             movement(states[actions])
         ], axis=1)
-        state.columns = [x+'_a'+actions for x in list(state.columns)]
+        state.columns = [x+'_a'+str(actions) for x in list(state.columns)]
         states_features.append(state)
         
     features = pd.concat([

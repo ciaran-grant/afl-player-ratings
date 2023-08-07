@@ -82,9 +82,9 @@ class ModelEvaluator():
 
         if is_numeric_dtype(plot_data['feature']) & (len(np.unique(plot_data['feature'])) > 50):
             bins = 10
-            edges = np.linspace(plot_data['feature'].min(), plot_data['feature'].max(), bins+1).astype(float).round(3)
+            edges = np.linspace(plot_data['feature'].min(), plot_data['feature'].max(), bins+1).astype(float).round(5)
             labels = [f'({edges[i]}, {edges[i+1]}]' for i in range(bins)]
-            plot_data['feature'] = pd.qcut(plot_data['feature'], q = bins, labels = labels)
+            plot_data['feature'] = pd.cut(plot_data['feature'], bins = bins, labels = labels)
             
         if self.compare_name is not None:
             feature_plot_data = plot_data.groupby('feature').agg(
@@ -124,8 +124,8 @@ class ModelEvaluator():
         for tick in ax1.get_xticklabels():
             tick.set_rotation(45)
             
-        ax1.set_ylabel("Number of Games", fontsize=14)
-        ax2.set_ylabel("Total Points Scored", fontsize=14)
+        ax1.set_ylabel("Exposure", fontsize=14)
+        ax2.set_ylabel(self.actual_name, fontsize=14)
 
         ax2.legend()
 
