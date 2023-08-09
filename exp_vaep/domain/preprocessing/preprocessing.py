@@ -109,6 +109,9 @@ def convert_chains_to_schema(chains):
     schema_chains = create_duration(schema_chains)
 
     schema_chains['match_id'] = schema_chains['Match_ID']
+    schema_chains['chain_number'] = schema_chains['Chain_Number']
+    schema_chains['order'] = schema_chains['Order']
+    schema_chains['match_id'] = schema_chains['Match_ID']
     schema_chains['quarter'] = schema_chains['Quarter']
     schema_chains['quarter_seconds'] = schema_chains['Quarter_Duration']
     schema_chains['overall_seconds'] = schema_chains['Duration']
@@ -126,7 +129,7 @@ def convert_chains_to_schema(chains):
     schema_chains = schema_chains.dropna(subset=['Player'])
     schema_chains = schema_chains[schema_chains['action_type'].isin(action_types)]
 
-    schema_chains = schema_chains[['match_id', 'quarter', 'quarter_seconds', 'overall_seconds', 'team', 'player', 'start_x', 'start_y', 'end_x', 'end_y', 'action_type', 'outcome_type', 'xScore']]
+    schema_chains = schema_chains[['match_id', 'chain_number', 'order', 'quarter', 'quarter_seconds', 'overall_seconds', 'team', 'player', 'start_x', 'start_y', 'end_x', 'end_y', 'action_type', 'outcome_type', 'xScore']]
     
     return schema_chains
 

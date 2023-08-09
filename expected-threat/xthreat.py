@@ -441,26 +441,26 @@ class ExpectedThreat:
             json.dump(self.xT.tolist(), f)
             
             
-    def load_model(path: str) -> "ExpectedThreat":
-        """Create a model from a pre-computed xT value surface.
-        
-        The value surface should be provided as a JSON file containing
-        a 2D matrix. Karun Singh provides such a grid at the following url:
-        https://karun.in/blog/data/open_xt_12x8_v1.json
+def load_model(path: str) -> ExpectedThreat:
+    """Create a model from a pre-computed xT value surface.
+    
+    The value surface should be provided as a JSON file containing
+    a 2D matrix. Karun Singh provides such a grid at the following url:
+    https://karun.in/blog/data/open_xt_12x8_v1.json
 
-        Parameters
-        ----------
-        path : str
-            Any valid string path is acceptable.
+    Parameters
+    ----------
+    path : str
+        Any valid string path is acceptable.
 
-        Returns
-        -------
-        ExpectedThreat
-            An xT model that uses the given value surface to value actions.
-        """
-        grid = pd.read_json(path)
-        model = ExpectedThreat()
-        model.xT = grid.values
-        model.w, model.l = model.xT.shape
-        return model
+    Returns
+    -------
+    ExpectedThreat
+        An xT model that uses the given value surface to value actions.
+    """
+    grid = pd.read_json(path)
+    model = ExpectedThreat()
+    model.xT = grid.values
+    model.w, model.l = model.xT.shape
+    return model
         
