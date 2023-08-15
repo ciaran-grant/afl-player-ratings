@@ -150,12 +150,12 @@ def create_player_rating_by_season(position_summary, selected_position, position
 
     return players
 
-def plot_stat_histogram(ax, summary_data, stat, player, team, season, xlim=4, ylim=30):
+def plot_stat_histogram(ax, summary_data, stat, player, team, season, xlim=4, ylim=30, stat_fontsize=4, stem_markersize=3, stem_colour = "w"):
     
     ax.hist(summary_data[stat], bins=20, edgecolor = "white", lw=0.5, color = team_colours[team]['positive'])    
     (markers, stemlines, baseline) = ax.stem(summary_data.loc[(player, team, season)][stat],20, basefmt=" ")
-    plt.setp(stemlines, linestyle="-", color="w")
-    plt.setp(markers, color="w", zorder=3, markersize=3)
+    plt.setp(stemlines, linestyle="-", color=stem_colour)
+    plt.setp(markers, color=stem_colour, zorder=3, markersize=stem_markersize)
 
     # Customise axes
     ax.set_xlim(-xlim, xlim)
@@ -171,27 +171,30 @@ def plot_stat_histogram(ax, summary_data, stat, player, team, season, xlim=4, yl
     
     stat_text = stat.replace("_", " ").replace("per100 z", "").upper()    
     ax_text(-xlim+2, 20, ax=ax,
-            s=f"<{stat_text}>", fontweight="bold", font="Karla", ha="right", fontsize=4
+            s=f"<{stat_text}>", fontweight="bold", font="Karla", ha="right", fontsize=stat_fontsize
     )
     return ax
 
-def plot_multiple_role_histograms(summary_data, stats_list, player, team, season, xlim=4, ylim=30):
+def plot_multiple_role_histograms(summary_data, stats_list, player, team, season, xlim=4, ylim=30, figsize = (8,6), stat_fontsize=4, ticksize = 6, stem_markersize=3, stem_colour = "w"):
     
     nrows = max([len(x) for x in stats_list])
     ncols = len(stats_list)
     
-    fig, axs = plt.subplots(ncols=ncols, nrows=nrows, layout="constrained")
+    fig, axs = plt.subplots(ncols=ncols, nrows=nrows, layout="constrained", figsize=figsize)
 
     for row in range(nrows):
         for col in range(ncols):
             if row > len(stats_list[col])-1:
                 axs[row, col].set_visible(False)
             else:
-                axs[row, col] = plot_stat_histogram(ax=axs[row, col], summary_data=summary_data, stat=stats_list[col][row], player=player, team=team, season=season, xlim=xlim, ylim=ylim)
+                axs[row, col] = plot_stat_histogram(ax=axs[row, col], summary_data=summary_data, stat=stats_list[col][row], 
+                                                    player=player, team=team, season=season, 
+                                                    xlim=xlim, ylim=ylim, stat_fontsize=stat_fontsize,
+                                                    stem_markersize=stem_markersize, stem_colour = stem_colour)
                 
                 if row == len(stats_list[col])-1:
-                    axs[row, col].set_xlabel('z-Score', size = 6)
-                    axs[row, col].tick_params(axis='x', labelsize=6)
+                    axs[row, col].set_xlabel('z-Score', size = ticksize)
+                    axs[row, col].tick_params(axis='x', labelsize=ticksize)
                 else:
                     axs[row, col].set_xticklabels([])
                     # axs[row, col].set_xticks([])
