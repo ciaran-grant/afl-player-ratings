@@ -10,7 +10,6 @@ class ModellingDataContract:
     RESPONSE_CONCEDES = "concedes"
     TRAIN_TEST_SPLIT_COL = "ModellingFilter"
 
-           
     # Scores
     feature_list_scores = [
         'type_Kick_a0',
@@ -239,3 +238,27 @@ class ModellingDataContract:
     # Concedes
     feature_list_concedes = []
     monotone_constraints_concedes = {}    
+    
+    # SPADL types
+    action_types = [
+        'Kick', # Regain possession
+        'Handball', # Regain possesion
+        'Carry', # always
+        'Uncontested Mark', # Complete mark
+        'Contested Mark', # Complete mark
+        'Loose Ball Get', # Always success
+        'Hard Ball Get', # Always success
+        'Spoil', # Always success
+        'Gather', # Always success
+        'Free For', # Reaches teammate
+        'Knock On', # Reaches teammate
+        'Shot', # Goal
+        'Tackle', # Regain possession
+        'Error', # Always fail
+    ]
+
+    outcome_types = [
+        'effective',
+        'ineffective',
+        'clanger'
+    ]

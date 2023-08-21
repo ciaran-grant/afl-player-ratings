@@ -67,5 +67,5 @@ player_stats[, Year.x:=NULL]
 player_stats[, Year.y:=NULL]
 
 ## Export
-write.csv(player_stats, "/Users/ciaran/Documents/Projects/AFL/git-repositories/afl-player-ratings/data/player_stats_202320.csv", row.names = FALSE)
+write.csv(player_stats, "/Users/ciaran/Documents/Projects/AFL/data/player_stats.csv", row.names = FALSE)
 

@@ -1,29 +1,9 @@
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
-action_types = [
-    'Kick', # Regain possession
-    'Handball', # Regain possesion
-    'Carry', # always
-    'Uncontested Mark', # Complete mark
-    'Contested Mark', # Complete mark
-    'Loose Ball Get', # Always success
-    'Hard Ball Get', # Always success
-    'Spoil', # Always success
-    'Gather', # Always success
-    'Free For', # Reaches teammate
-    'Knock On', # Reaches teammate
-    'Shot', # Goal
-    'Tackle', # Regain possession
-    'Error', # Always fail
-]
-
-outcome_types = [
-    'effective',
-    'ineffective',
-    'clanger'
-]
-
+from vaep.domain.contracts.modelling_data_contract import ModellingDataContract
+from vaep.domain.preprocessing.formula import *
 ### Converting chain data to SPADL format
 
 def play_left_to_right(chains):
@@ -127,7 +107,7 @@ def convert_chains_to_schema(chains):
     schema_chains['outcome_type'] = get_outcome_types(schema_chains)
 
     schema_chains = schema_chains.dropna(subset=['Player'])
-    schema_chains = schema_chains[schema_chains['action_type'].isin(action_types)]
+    schema_chains = schema_chains[schema_chains['action_type'].isin(ModellingDataContract.action_types)]
 
     schema_chains = schema_chains[['match_id', 'chain_number', 'order', 'quarter', 'quarter_seconds', 'overall_seconds', 'team', 'player', 'start_x', 'start_y', 'end_x', 'end_y', 'action_type', 'outcome_type']]
     
@@ -171,7 +151,7 @@ def action_type(actions):
 def action_type_onehot(actions):
     
     X = {}
-    for action_type in action_types:
+    for action_type in ModellingDataContract.action_types:
         col = 'type_' + action_type
         X[col] = actions['action_type'] == action_type
     return pd.DataFrame(X, index=actions.index)
@@ -183,7 +163,7 @@ def outcome(actions):
 def outcome_onehot(actions):
     
     X = {}
-    for outcome_type in outcome_types:
+    for outcome_type in ModellingDataContract.outcome_types:
         col = 'outcome_' + outcome_type
         X[col] = actions['outcome_type'] == outcome_type
     return pd.DataFrame(X, index=actions.index)
@@ -421,3 +401,33 @@ def create_gamestate_labels(chains):
     gamestate_labels = pd.concat(match_gamestate_label_list, axis=0)
     
     return gamestate_labels
+
+def get_stratified_train_test_val_columns(data, response):
+
+    X, y = data.drop(columns=[response]), data[response]
+    X_modelling, X_test, y_modelling, y_test = train_test_split(X, y, test_size = 0.2, random_state=2407, stratify=y)
+    X_train, X_val, y_train, y_val = train_test_split(X_modelling, y_modelling, test_size = 0.2, random_state=2407, stratify=y_modelling)
+    X_train[response+'TrainingSet'] = True
+    X_test[response+'TestSet'] = True
+    X_val[response+'ValidationSet'] = True
+    
+    if [response+'TrainingSet', response+'TestSet', response+'ValidationSet'] not in list(data):
+        data = pd.merge(data, X_train[response+'TrainingSet'], how="left", left_index=True, right_index=True) 
+        data = pd.merge(data, X_test[response+'TestSet'], how="left", left_index=True, right_index=True) 
+        data = pd.merge(data, X_val[response+'ValidationSet'], how="left", left_index=True, right_index=True)
+        data[[response+'TrainingSet', response+'TestSet', response+'ValidationSet']] = data[[response+'TrainingSet', response+'TestSet', response+'ValidationSet']].fillna(False) 
+        
+    return data
+
+def calculate_vaep_values(schema_chains):
+    
+    match_list = list(schema_chains['match_id'].unique())
+    match_vaep_list = []
+    for match in match_list:
+        match_chains = schema_chains[schema_chains['match_id'] == match]
+        v = value(match_chains, match_chains['scores'], match_chains['concedes'])
+        match_vaep_list.append(v)
+        
+    vaep_values = pd.concat(match_vaep_list, axis=0)
+    
+    return pd.concat([schema_chains, vaep_values], axis=1)

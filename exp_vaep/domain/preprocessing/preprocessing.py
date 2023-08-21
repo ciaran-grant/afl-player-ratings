@@ -1,28 +1,8 @@
 import numpy as np
 import pandas as pd
-
-action_types = [
-    'Kick', # Regain possession
-    'Handball', # Regain possesion
-    'Carry', # always
-    'Uncontested Mark', # Complete mark
-    'Contested Mark', # Complete mark
-    'Loose Ball Get', # Always success
-    'Hard Ball Get', # Always success
-    'Spoil', # Always success
-    'Gather', # Always success
-    'Free For', # Reaches teammate
-    'Knock On', # Reaches teammate
-    'Shot', # Goal
-    'Tackle', # Regain possession
-    'Error', # Always fail
-]
-
-outcome_types = [
-    'effective',
-    'ineffective',
-    'clanger'
-]
+import joblib
+from exp_vaep.domain.preprocessing.formula import *
+from exp_vaep.domain.contracts.modelling_data_contract import ModellingDataContract
 
 ### Converting chain data to SPADL format
 
@@ -127,7 +107,7 @@ def convert_chains_to_schema(chains):
     schema_chains['outcome_type'] = get_outcome_types(schema_chains)
 
     schema_chains = schema_chains.dropna(subset=['Player'])
-    schema_chains = schema_chains[schema_chains['action_type'].isin(action_types)]
+    schema_chains = schema_chains[schema_chains['action_type'].isin(ModellingDataContract.action_types)]
 
     schema_chains = schema_chains[['match_id', 'chain_number', 'order', 'quarter', 'quarter_seconds', 'overall_seconds', 'team', 'player', 'start_x', 'start_y', 'end_x', 'end_y', 'action_type', 'outcome_type', 'xScore']]
     
@@ -171,7 +151,7 @@ def action_type(actions):
 def action_type_onehot(actions):
     
     X = {}
-    for action_type in action_types:
+    for action_type in ModellingDataContract.action_types:
         col = 'type_' + action_type
         X[col] = actions['action_type'] == action_type
     return pd.DataFrame(X, index=actions.index)
@@ -183,7 +163,7 @@ def outcome(actions):
 def outcome_onehot(actions):
     
     X = {}
-    for outcome_type in outcome_types:
+    for outcome_type in ModellingDataContract.outcome_types:
         col = 'outcome_' + outcome_type
         X[col] = actions['outcome_type'] == outcome_type
     return pd.DataFrame(X, index=actions.index)
@@ -415,6 +395,30 @@ def create_gamestate_labels(chains):
     
     return gamestate_labels
 
+final_state_map = {
+    'goal':'goal',
+    'behind':'behind',
+    'turnover':'miss',
+    'rushed':'miss',
+    'outOfBounds':'miss',
+    'ballUpCall':'miss',
+    'endQuarter':'miss',
+    'rushedOpp':'miss',
+}
+
+def expected_score_response_processing(chain_data):
+    
+    chain_data['Final_State'] = chain_data['Final_State'].replace(final_state_map)
+
+    chain_data['Goal'] = np.where((chain_data['Shot_At_Goal'] == True) & (chain_data['Final_State'] == "goal"), 1, 0)
+    chain_data['Behind'] = np.where((chain_data['Shot_At_Goal'] == True) & (chain_data['Final_State'] == "behind"), 1, 0)
+    chain_data['Miss'] = np.where((chain_data['Shot_At_Goal'] == True) & (chain_data['Final_State'] == "miss"), 1, 0)
+
+    chain_data['Score'] = np.where(chain_data['Goal']==1, 6,
+                                np.where(chain_data['Behind']==1, 1, 
+                                            0))
+    
+    return chain_data
 
 def expected_score_feature_engineering(chain_data):
         
@@ -461,6 +465,68 @@ def expected_score_feature_engineering(chain_data):
     
     return chain_data
 
+def split_shots(chain_data):
+    
+    chain_data['Event_Type1'] = chain_data['Description'].shift(1)
+    df_shots = chain_data[chain_data['Shot_At_Goal'] == True]
+    df_shots['Set_Shot'] = df_shots['Event_Type1'].apply(lambda x: ("Mark" in x) or ("Free" in x))
+    df_set_shots = df_shots[df_shots['Set_Shot']]
+    df_open_shots = df_shots[~df_shots['Set_Shot']]
+    
+    return df_set_shots, df_open_shots
+
+def get_expected_scores(chain_data, expected_scores_path_dict):
+    
+    # Preprocess
+    chain_data = expected_score_response_processing(chain_data)
+    df_set_shots, df_open_shots = split_shots(chain_data)
+
+    goal_set_preproc = joblib.load(expected_scores_path_dict['set']['goal']['preprocessor'])
+    behind_set_preproc = joblib.load(expected_scores_path_dict['set']['behind']['preprocessor'])
+    miss_set_preproc = joblib.load(expected_scores_path_dict['set']['miss']['preprocessor'])
+    goal_open_preproc = joblib.load(expected_scores_path_dict['open']['goal']['preprocessor'])
+    behind_open_preproc = joblib.load(expected_scores_path_dict['open']['behind']['preprocessor'])
+    miss_open_preproc = joblib.load(expected_scores_path_dict['open']['miss']['preprocessor'])
+
+    set_goal_features = goal_set_preproc.transform(chain_data)
+    set_behind_features = behind_set_preproc.transform(chain_data)
+    set_miss_features = miss_set_preproc.transform(chain_data)
+    open_goal_features = goal_open_preproc.transform(chain_data)
+    open_behind_features = behind_open_preproc.transform(chain_data)
+    open_miss_features = miss_open_preproc.transform(chain_data)
+
+    # Load models
+    expected_goal_set_model = joblib.load(expected_scores_path_dict['set']['goal']['model'])
+    expected_behind_set_model = joblib.load(expected_scores_path_dict['set']['behind']['model'])
+    expected_miss_set_model = joblib.load(expected_scores_path_dict['set']['miss']['model'])
+
+    expected_goal_open_model = joblib.load(expected_scores_path_dict['open']['goal']['model'])
+    expected_behind_open_model = joblib.load(expected_scores_path_dict['open']['behind']['model'])
+    expected_miss_open_model = joblib.load(expected_scores_path_dict['open']['miss']['model'])
+
+    # Score models
+    df_set_shots['xGoals'] = expected_goal_set_model.predict_proba(set_goal_features, calibrate=True)
+    df_set_shots['xBehinds'] = expected_behind_set_model.predict_proba(set_behind_features, calibrate=True)
+    df_set_shots['xMiss'] = expected_miss_set_model.predict_proba(set_miss_features, calibrate=True)
+
+    df_open_shots['xGoals'] = expected_goal_open_model.predict_proba(open_goal_features, calibrate=True)
+    df_open_shots['xBehinds'] = expected_behind_open_model.predict_proba(open_behind_features, calibrate=True)
+    df_open_shots['xMiss'] = expected_miss_open_model.predict_proba(open_miss_features, calibrate=True)
+
+    # Expected Score
+    df_shots = pd.concat([df_set_shots, df_open_shots], axis=0)
+    df_shots = df_shots.sort_values(by = ['Match_ID', "Chain_Number", "Order"])
+
+    df_shots['xGoals_normalised'] = df_shots['xGoals'] / (df_shots['xGoals'] + df_shots['xBehinds'] + df_shots['xMiss'])
+    df_shots['xBehinds_normalised'] = df_shots['xBehinds'] / (df_shots['xGoals'] + df_shots['xBehinds'] + df_shots['xMiss'])
+    df_shots['xMiss_normalised'] = df_shots['xMiss'] / (df_shots['xGoals'] + df_shots['xBehinds'] + df_shots['xMiss'])
+
+    df_shots['xScore'] = df_shots['xGoals_normalised']*6 + df_shots['xBehinds_normalised']
+
+    # Merge xScore to Chain
+    chain_data = chain_data.merge(df_shots[['Match_ID', "Chain_Number", "Order", 'xGoals', 'xBehinds', 'xMiss', 'xGoals_normalised', 'xBehinds_normalised', 'xMiss_normalised', 'xScore']], how = "left", on = ['Match_ID', "Chain_Number", "Order"])
+
+    return chain_data
 
 def get_stratified_train_test_val_columns(data, response):
     
@@ -480,3 +546,16 @@ def get_stratified_train_test_val_columns(data, response):
         data[[response+'TrainingSet', response+'TestSet', response+'ValidationSet']] = data[[response+'TrainingSet', response+'TestSet', response+'ValidationSet']].fillna(False) 
         
     return data
+
+def calculate_exp_vaep_values(schema_chains):
+    
+    match_list = list(schema_chains['match_id'].unique())
+    match_exp_vaep_list = []
+    for match in match_list:
+        match_chains = schema_chains[schema_chains['match_id'] == match]
+        v = value(match_chains, match_chains['exp_scores'], match_chains['exp_concedes'])
+        match_exp_vaep_list.append(v)
+        
+    exp_vaep_values = pd.concat(match_exp_vaep_list, axis=0)
+    
+    return pd.concat([schema_chains, exp_vaep_values], axis=1)

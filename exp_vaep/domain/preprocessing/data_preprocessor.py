@@ -1,17 +1,19 @@
-from vaep.domain.preprocessing.preprocessing import *
-from vaep.domain.contracts.modelling_data_contract import ModellingDataContract
+from exp_vaep.domain.preprocessing.preprocessing import *
+from exp_vaep.domain.contracts.modelling_data_contract import ModellingDataContract
+
+from expected_score_model.domain.preprocessing.data_preprocessor import DataPreprocessor
 from sklearn.base import BaseEstimator, TransformerMixin
 
 import pandas as pd
 import numpy as np
 
-# from vaep.domain.contracts.mappings import Mappings
+# from exp_vaep.domain.contracts.mappings import Mappings
 
-class DataPreprocessor(BaseEstimator, TransformerMixin):
+class ExpVAEPPreprocessor(BaseEstimator, TransformerMixin):
     """ Preprocessing class and functions for training total game score model.
     """
     
-    def __init__(self):
+    def __init__(self, expected_scores_path_dict):
         """ Specify mappings and rolling average columns to create.
 
         Args:
@@ -19,6 +21,7 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
             rolling_dict (Dict): Dictionary specifying columns and types of rolling average columns.
         """
         self.ModellingDataContract = ModellingDataContract
+        self.expected_scores_path_dict = expected_scores_path_dict
        
         
     def fit(self, X):
@@ -32,16 +35,8 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
             self: Preprocessor learns expected colunms and means to impute.
         """
         
-        X_copy = X.copy()
-        
-        X_schema = convert_chains_to_schema(X_copy)
-        
-        X_features = create_gamestate_features(X_schema)        
-        # X_labels = create_gamestate_labels(X_copy)
-        
         # Keep only modelling columns
         self.modelling_cols = ModellingDataContract.feature_list_scores
-        X_features = X_features[self.modelling_cols]
                         
         return self
     
@@ -55,11 +50,14 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
             Dataframe: Transformed data with modelling columns and no missing values.
         """
         
+        # Get xScores
+        X = get_expected_scores(X, self.expected_scores_path_dict)
+        
+        # Get Expected VAEP
         X_schema = convert_chains_to_schema(X)
         
         X_features = create_gamestate_features(X_schema)
         X_features = X_features[self.modelling_cols]
                 
-
         return X_features
     
