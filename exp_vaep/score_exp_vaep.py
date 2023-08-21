@@ -30,10 +30,12 @@ def score_and_export_exp_vaep():
 
     # Load data
     chains = pd.read_csv(chain_file_path)
+    print("Chain data loaded.")
 
     # Processing
     preproc = joblib.load(exp_vaep_config.exp_vaep_preprocessor_file_path)
     chain_features = preproc.transform(chains)
+    print("Preprocessing.. Complete.")
 
     # Load model
     chains = get_expected_scores(chains, expected_scores_path_dict)
@@ -45,9 +47,11 @@ def score_and_export_exp_vaep():
 
     # Scoring
     scored_chains = calculate_exp_vaep_values(schema_chains)
+    print("Scoring.. complete.")
 
     # Export data
     scored_chains.to_csv(exp_vaep_config.exp_vaep_chain_output_path, index=False)
+    print("Exporting.. complete.")
 
 if __name__ == "__main__":
     

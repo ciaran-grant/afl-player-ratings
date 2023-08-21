@@ -113,7 +113,7 @@ def value(actions, scores, concedes):
     
     """
     v = pd.DataFrame()
-    v['offensive_value'] = offensive_value(actions, scores, concedes)
-    v['defensive_value'] = defensive_value(actions, scores, concedes)
-    v['vaep_value'] = v['offensive_value'] + v['defensive_value']
+    v['exp_offensive_value'] = offensive_value(actions, scores, concedes)
+    v['exp_defensive_value'] = defensive_value(actions, scores, concedes)
+    v['exp_vaep_value'] = v['exp_offensive_value'] + v['exp_defensive_value']
     return v
