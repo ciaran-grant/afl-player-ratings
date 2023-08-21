@@ -32,19 +32,19 @@ Expected Threat uses historical data to combine the following probabilities:
 - Probability of moving
 - If moving, what is the probability of moving to any other location?
 
-![move](expected-threat/figures/20230729_move_probability.png)
+![move](expected_threat/figures/20230729_move_probability.png)
 
 - Probability of shooting
 
-![shot](expected-threat/figures/20230729_shot_probability.png)
+![shot](expected_threat/figures/20230729_shot_probability.png)
 
 - If shooting, what is the probability of scoring?
 
-![goal](expected-threat/figures/20230729_goal_probability.png)
+![goal](expected_threat/figures/20230729_goal_probability.png)
 
 These are all combined to get the "expected threat" values at every location on the pitch. These are interpreted as the likelihood of scoring a goal in the next few actions when you have the ball here.
 
-![expected-threat](expected-threat/figures/20230729_expected_threat.png)
+![expected-threat](expected_threat/figures/20230729_expected_threat.png)
 
 #### Expected Threat Created
 
