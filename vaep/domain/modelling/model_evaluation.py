@@ -205,17 +205,18 @@ class XGBModelEvaluator(ModelEvaluator):
         """Plot feature importance for the model"""
         xgb.plot_importance(self.model, max_num_features = max_num_features, importance_type = importance_type)
          
-    def _get_shap_values(self):
+    def _get_shap_values(self, sample = 10000):
         """Gets SHAP values for XGBoost model.
         """
+        self.sample_data = self.data[self.feature_names].sample(sample)
         explainer = shap.Explainer(self.model)
-        self.shap_values = explainer(self.data[self.feature_names])
+        self.shap_values = explainer(self.sample_data)
 
-    def plot_shap_summary_plot(self, max_display=10):
+    def plot_shap_summary_plot(self, max_display=10, sample = 10000):
         """Plot SHAP values for tree-based and other models"""
         if not(self.shap_values):
-            self._get_shap_values()
-        shap.summary_plot(self.shap_values, self.data[self.feature_names], max_display = max_display)
+            self._get_shap_values(sample=sample)
+        shap.summary_plot(self.shap_values, self.sample_data, max_display = max_display)
         
     def get_ranked_feature_importance(self):
         """ For XGBoost model, ranks features by average SHAP value.

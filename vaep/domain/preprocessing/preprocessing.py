@@ -84,7 +84,7 @@ def convert_chains_to_schema(chains):
     
     schema_chains = chains.copy()
     
-    schema_chains = play_left_to_right(schema_chains)
+    # schema_chains = play_left_to_right(schema_chains)
     
     schema_chains = create_duration(schema_chains)
 
@@ -98,10 +98,10 @@ def convert_chains_to_schema(chains):
     schema_chains['team'] = schema_chains['Team']
     schema_chains['player'] = schema_chains['Player']
 
-    schema_chains['start_x'] = schema_chains['new_x']
-    schema_chains['start_y'] = schema_chains['new_y']
-    schema_chains['end_x'] = schema_chains.groupby('Match_ID')['new_x'].shift(-1).fillna(0)
-    schema_chains['end_y'] = schema_chains.groupby('Match_ID')['new_y'].shift(-1).fillna(0)
+    schema_chains['start_x'] = schema_chains['x']
+    schema_chains['start_y'] = schema_chains['y']
+    schema_chains['end_x'] = schema_chains.groupby('Match_ID')['x'].shift(-1).fillna(0)
+    schema_chains['end_y'] = schema_chains.groupby('Match_ID')['y'].shift(-1).fillna(0)
 
     schema_chains['action_type'] = get_action_types(schema_chains)
     schema_chains['outcome_type'] = get_outcome_types(schema_chains)

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-chains = pd.read_csv("/Users/ciaran/Documents/Projects/AFL/data/scored_match_chains.csv")
+chains = pd.read_csv("/Users/ciaran/Documents/Projects/AFL/data/scored_match_chains_v2.csv")
 player_stats = pd.read_csv("/Users/ciaran/Documents/Projects/AFL/data/player_stats.csv")
 
 def get_player_totals_by_match(chains):
@@ -24,4 +24,4 @@ receiver_value = receiver_value.rename(columns = {
 
 player_stats = player_stats.merge(receiver_value[['Match_ID', 'Player', 'xT_received', 'xT_prevented', 'vaep_value_received', 'exp_vaep_value_received']], how = "left", on = ['Match_ID', 'Player'])
 
-player_stats.to_csv("/Users/ciaran/Documents/Projects/AFL/data/scored_player_stats.csv", index=False)
+player_stats.to_csv("/Users/ciaran/Documents/Projects/AFL/data/scored_player_stats_v2.csv", index=False)

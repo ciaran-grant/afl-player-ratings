@@ -33,16 +33,16 @@ def score_and_export_exp_vaep():
     print("Chain data loaded.")
 
     # Processing
-    preproc = joblib.load(exp_vaep_config.exp_vaep_preprocessor_file_path)
+    preproc = joblib.load(exp_vaep_config.exp_vaep_preprocessor_v2_file_path)
     chain_features = preproc.transform(chains)
     print("Preprocessing.. Complete.")
 
     # Load model
     chains = get_expected_scores(chains, expected_scores_path_dict)
     schema_chains = convert_chains_to_schema(chains)
-    exp_score_model = joblib.load(exp_vaep_config.exp_vaep_score_model_file_path)
+    exp_score_model = joblib.load(exp_vaep_config.exp_vaep_score_model_v2_file_path)
     schema_chains['exp_scores'] = np.clip(exp_score_model.predict(chain_features), 0, 6)
-    exp_concede_model = joblib.load(exp_vaep_config.exp_vaep_concede_model_file_path)
+    exp_concede_model = joblib.load(exp_vaep_config.exp_vaep_concede_model_v2_file_path)
     schema_chains['exp_concedes'] = np.clip(exp_concede_model.predict(chain_features), 0, 6)
 
     # Scoring
@@ -50,7 +50,7 @@ def score_and_export_exp_vaep():
     print("Scoring.. complete.")
 
     # Export data
-    scored_chains.to_csv(exp_vaep_config.exp_vaep_chain_output_path, index=False)
+    scored_chains.to_csv(exp_vaep_config.exp_vaep_chain_v2_output_path, index=False)
     print("Exporting.. complete.")
 
 if __name__ == "__main__":
