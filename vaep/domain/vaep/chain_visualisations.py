@@ -1,4 +1,5 @@
 from viz.afl_colours import team_colours
+import numpy as np
 
 action_map = {
     'Hard Ball Get': "Hard Get",
@@ -61,6 +62,10 @@ def plot_chain_vaep(chain, pitch, ax):
     
     chain_copy = chain.copy()
     
+    # Create new end_x, end_y back for sake of visualising if Chain_Team not same as Team
+    chain_copy['x_1'] = chain_copy['x'].shift(-1).fillna(0)
+    chain_copy['y_1'] = chain_copy['y'].shift(-1).fillna(0)
+    
     # If shot, get end location
     if ((chain_copy['Shot_At_Goal'] > 0).any()) | (len(chain_copy[chain_copy['Description'] == "Shot"])):
         if len(chain_copy[chain_copy['Description'] == "Goal"]) > 0:
@@ -76,8 +81,8 @@ def plot_chain_vaep(chain, pitch, ax):
                 shot_end_y = -1*(pitch.dim.goal_width)
     # if turnover at the end, set end x/y to same location (to avoid flipping the pitch)
     if list(set(chain_copy['Final_State'] == "turnover"))[0]:
-        chain_copy.iloc[-1, chain_copy.columns.get_loc('end_x')] = chain_copy.iloc[-1, chain_copy.columns.get_loc('x')]
-        chain_copy.iloc[-1, chain_copy.columns.get_loc('end_y')] = chain_copy.iloc[-1, chain_copy.columns.get_loc('y')]
+        chain_copy.iloc[-1, chain_copy.columns.get_loc('x_1')] = chain_copy.iloc[-1, chain_copy.columns.get_loc('x')]
+        chain_copy.iloc[-1, chain_copy.columns.get_loc('y_1')] = chain_copy.iloc[-1, chain_copy.columns.get_loc('y')]
 
     # Reset order to only include SPADL action_types
     chain_spadl = chain_copy[~chain_copy['action_type'].isnull()].reset_index(drop=True)
@@ -138,12 +143,12 @@ def plot_chain_vaep(chain, pitch, ax):
 
     for i, row in chain_spadl.iterrows():
         if (row['action_type'] == "Carry"):
-            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['end_x'], row['end_y']), 
+            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['x_1'], row['y_1']), 
                         ha='center', va='center', ax=ax, fontsize=4, zorder=1,
                         arrowprops=dict(color="white", arrowstyle = "-", linestyle = "--"))
             pitch.annotate(text = row['order'], xy = (row['x'], row['y']+3), ax=ax, fontsize = 5, fontweight="bold")
         elif (row['action_type'] == "Kick"):
-            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['end_x'], row['end_y']), 
+            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['x_1'], row['y_1']), 
                         ha='center', va='center', ax=ax, fontsize=4, zorder=1,
                         arrowprops=dict(color="white", arrowstyle = "->"))
             pitch.annotate(text = row['order'], xy = (row['x'], row['y']+3), ax=ax, fontsize = 5, fontweight="bold")
@@ -153,7 +158,7 @@ def plot_chain_vaep(chain, pitch, ax):
                         arrowprops=dict(color="white", arrowstyle = "->"))
             pitch.annotate(text = row['order'], xy = (row['x'], row['y']+3), ax=ax, fontsize = 5, fontweight="bold")
         else:
-            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['end_x'], row['end_y']), 
+            pitch.annotate(text="", xytext = (row['x'], row['y']), xy=(row['x_1'], row['y_1']), 
                         ha='center', va='center', ax=ax, fontsize=4, zorder=1,
                         arrowprops=dict(color="white", arrowstyle = "-"))
             pitch.annotate(text = row['order'], xy = (row['x'], row['y']+3), ax=ax, fontsize = 5, fontweight="bold")

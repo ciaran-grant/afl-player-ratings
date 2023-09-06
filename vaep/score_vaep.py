@@ -9,7 +9,7 @@ def score_and_export_vaep():
     from vaep.domain.preprocessing.formula import value, offensive_value, defensive_value
 
     from config import chain_file_path
-    from vaep_config import vaep_preprocessor_v2_file_path, vaep_score_model_v2_file_path, vaep_concede_model_v2_file_path, vaep_chain_v2_output_path
+    from vaep.vaep_config import vaep_preprocessor_v2_file_path, vaep_score_model_v2_file_path, vaep_concede_model_v2_file_path, vaep_chain_v2_output_path
 
     # Load data
     chains = pd.read_csv(chain_file_path)
