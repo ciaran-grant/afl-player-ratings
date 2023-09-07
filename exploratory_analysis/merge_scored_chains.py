@@ -22,4 +22,4 @@ def merge_and_export_scored_chains():
     
 if __name__ == "__main__":
     
-    merge_scored_chains()
+    merge_and_export_scored_chains()
