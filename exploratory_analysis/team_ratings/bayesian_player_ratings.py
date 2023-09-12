@@ -85,7 +85,7 @@ class TeamRatings:
         home_predicted_offensive_value, away_predicted_offensive_value = self.calculate_predicted_match_offensive_values(player_stats, match_id)
         home_predicted_defensive_rating, away_predicted_defensive_rating = self.calculate_predicted_match_defensive_ratings(player_stats, match_id)
         
-        home_predicted_rating = home_predicted_offensive_value_ha - home_predicted_defensive_rating_ha
+        home_predicted_rating = home_predicted_offensive_value - home_predicted_defensive_rating
         away_predicted_rating = away_predicted_offensive_value - away_predicted_defensive_rating
 
         home_predicted_rating_ha = self.apply_home_advantage(home_predicted_rating)
