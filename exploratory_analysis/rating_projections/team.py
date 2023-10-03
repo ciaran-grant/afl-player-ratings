@@ -1,3 +1,4 @@
+import pandas as pd
 from player import Player
 
 class Team:
@@ -47,3 +48,6 @@ class Team:
     
     def calculate_defensive_rating(self):
         pass 
+    
+    def get_player_ratings(self):
+        return pd.DataFrame().from_dict({k: v.rating for (k, v) in self.players.items()}, orient = 'index')

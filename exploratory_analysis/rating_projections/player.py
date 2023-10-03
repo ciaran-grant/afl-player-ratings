@@ -2,16 +2,12 @@ class Player:
     """ Class for holding information about players. """
     def __init__(self, 
                  name: str, 
-                 team_name: str,
-                 season: int = None,
-                 round_id: str = None,
-                 rating: dict = {"Initial":0}):
+                 team_name: str
+                 ):
         
         self.name = name
         self.team_name = team_name
-        self.season = season
-        self.round_id = round_id
-        self.rating = rating
+        self.rating = {"Initial":0}
         
     def get_name(self):
         return self.name

@@ -97,6 +97,12 @@ class Match:
     def get_away_players(self) -> List[Player]:
         return self.get_away_team().players 
     
+    def get_home_match_squad(self) -> List[str]:
+        return list(self.player_stats[self.player_stats['Team'] == self.home_team.team_name]['Player'])
+    
+    def get_away_match_squad(self) -> List[str]:
+        return list(self.player_stats[self.player_stats['Team'] == self.away_team.team_name]['Player'])
+    
     def aggregate_player_to_match_stats(self) -> pd.DataFrame:
     
         self.match_stats = self.player_stats.groupby(['Match_ID', 'Team', 'Home_Team']).sum()[['Score', 'xScore', 'exp_vaep_value', 'exp_offensive_value', 'exp_defensive_value']].reset_index()
