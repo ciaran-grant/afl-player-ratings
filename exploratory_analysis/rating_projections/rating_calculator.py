@@ -36,13 +36,14 @@ class TeamRatingCalculator(RatingCalculator):
             return Match.match_stats['Away_exp_vaep_value'].iloc[0] - Match.match_stats['Home_exp_vaep_value'].iloc[0]
         
     def calculate_new_rating(self, Match, Projector, home_advantage = 5.83, prior_std=10, actual_std=25):
-        return self.calculate_posterior_mean(prior_mean = self.get_projected_rating(Projector),
-                                             actual_mean = self.get_match_rating(Match) - home_advantage,
-                                             prior_std = prior_std,
-                                             actual_std = actual_std)
+        return round(self.calculate_posterior_mean(prior_mean = self.get_projected_rating(Projector),
+                                                    actual_mean = self.get_match_rating(Match) - home_advantage,
+                                                    prior_std = prior_std,
+                                                    actual_std = actual_std),
+                     4)
 
-    def update_team_rating(self, Match, Projector, prior_std=10, actual_std=25):
-        self.Team.add_rating(Match.round_id, self.calculate_new_rating(Match, Projector, prior_std, actual_std))
+    def update_team_rating(self, Match, Projector, home_advantage = 5.83, prior_std=10, actual_std=25):
+        self.Team.add_rating(Match.round_id, self.calculate_new_rating(Match, Projector, home_advantage, prior_std, actual_std))
         
     def get_team_offensive_rating(self, round_id):
         return self.Team.get_offensive_rating(round_id)
@@ -95,10 +96,11 @@ class PlayerRatingCalculator(RatingCalculator):
             raise KeyError("Player {} not available in given match.".format(self.Player.get_name())) from None 
         
     def calculate_new_rating(self, Match, prior_std = 10, actual_std = 25):
-        return self.calculate_posterior_mean(prior_mean = self.get_player_rating(Match.previous_round_id),
+        return round(self.calculate_posterior_mean(prior_mean = self.get_player_rating(Match.previous_round_id),
                                              actual_mean = self.get_match_rating(Match),
                                              prior_std = prior_std,
-                                             actual_std = actual_std)
+                                             actual_std = actual_std),
+                     4)
 
     def update_player_rating(self, Match, prior_std = 10, actual_std = 25):
         self.Player.add_rating(Match.round_id, self.calculate_new_rating(Match, prior_std, actual_std))
